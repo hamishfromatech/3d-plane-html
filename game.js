@@ -1,6 +1,7 @@
 // --- Basic Setup ---
 let scene, camera, renderer;
-let plane, clock, rings = [], mountains = [], skyscrapers = [];
+let plane, clock, rings = [], mountains = [], skyscrapers = [], houses = [], clouds = [], roads = [];
+let ground;
 let score = 0;
 let scoreElement = document.getElementById('info');
 let planeSpeed = 0.6; // Slightly increased speed for scenery effect
@@ -113,17 +114,26 @@ function resetGame() {
     // Clear all objects and respawn
     rings.forEach(ring => scene.remove(ring));
     skyscrapers.forEach(obj => scene.remove(obj));
+    houses.forEach(obj => scene.remove(obj));
+    roads.forEach(obj => scene.remove(obj));
     mountains.forEach(obj => scene.remove(obj));
+    clouds.forEach(cloud => scene.remove(cloud));
     particles.forEach(particle => scene.remove(particle));
 
     rings = [];
     skyscrapers = [];
+    houses = [];
+    roads = [];
     mountains = [];
+    clouds = [];
     particles = [];
 
     spawnInitialRings(10);
-    spawnInitialScenery(15, 'skyscraper');
-    spawnInitialScenery(10, 'mountain');
+    spawnInitialScenery(8, 'skyscraper');
+    spawnInitialScenery(15, 'apartment');
+    spawnInitialScenery(25, 'house');
+    spawnInitialScenery(12, 'road');
+    spawnInitialScenery(8, 'mountain');
 }
 
 function gameOver() {
@@ -219,6 +229,22 @@ function updateParticles() {
     }
 }
 
+function updateClouds(deltaTime) {
+    for (let i = clouds.length - 1; i >= 0; i--) {
+        const cloud = clouds[i];
+
+        // Move clouds slowly
+        cloud.position.z += planeSpeed * 20 * deltaTime; // Much slower than plane
+
+        // Recycle clouds when they pass the camera
+        if (cloud.position.z > camera.position.z + 20) {
+            // Reposition cloud far behind
+            cloud.position.z = camera.position.z - 80 - Math.random() * 50;
+            cloud.position.x = (Math.random() - 0.5) * 100;
+        }
+    }
+}
+
 // --- Initialization ---
 function init() {
     // Scene
@@ -248,9 +274,14 @@ function init() {
 
     // Create Game Objects
     createPlane();
+    createGround();
     spawnInitialRings(10);
-    spawnInitialScenery(15, 'skyscraper'); // Add 15 skyscrapers
-    spawnInitialScenery(10, 'mountain');   // Add 10 mountains
+    spawnInitialScenery(8, 'skyscraper'); // Fewer skyscrapers
+    spawnInitialScenery(15, 'apartment'); // More apartments
+    spawnInitialScenery(25, 'house');    // Many houses for suburban feel
+    spawnInitialScenery(12, 'road');     // Roads connecting areas
+    spawnInitialScenery(8, 'mountain');  // Fewer mountains
+    spawnInitialClouds(12); // Add some clouds
 
     // Event Listeners
     window.addEventListener('keydown', handleKeyDown);
@@ -316,6 +347,58 @@ function createPlane() {
     scene.add(plane);
 }
 
+function createGround() {
+    // Create a large ground plane
+    const groundGeometry = new THREE.PlaneGeometry(200, 200, 32, 32);
+    const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0x228B22, // Forest green
+        flatShading: true,
+        transparent: false
+    });
+
+    ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2; // Rotate to horizontal
+    ground.position.y = -5; // Position at ground level
+    ground.position.z = -50; // Extend far behind the player
+    scene.add(ground);
+}
+
+function createCloud(zPosition) {
+    // Create a cloud made of multiple spheres
+    const cloudGroup = new THREE.Group();
+    const numSpheres = Math.floor(Math.random() * 5) + 3; // 3-7 spheres per cloud
+
+    for (let i = 0; i < numSpheres; i++) {
+        const radius = Math.random() * 2 + 1; // Random size spheres
+        const geometry = new THREE.SphereGeometry(radius, 8, 8);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const sphere = new THREE.Mesh(geometry, material);
+
+        // Position spheres relative to cloud center
+        sphere.position.set(
+            (Math.random() - 0.5) * 4, // Spread horizontally
+            (Math.random() - 0.5) * 1 + 8 + Math.random() * 5, // High in sky
+            (Math.random() - 0.5) * 2  // Slight depth variation
+        );
+
+        cloudGroup.add(sphere);
+    }
+
+    cloudGroup.position.x = (Math.random() - 0.5) * 100; // Wide spread
+    cloudGroup.position.y = 0; // Y position handled by individual spheres
+    cloudGroup.position.z = zPosition;
+
+    clouds.push(cloudGroup);
+    scene.add(cloudGroup);
+
+    return cloudGroup;
+}
+
 function createRing(zPosition) {
     // (Same as before)
     const ringGeometry = new THREE.TorusGeometry(1.5, 0.2, 16, 50);
@@ -345,6 +428,30 @@ function createSceneryObject(type, zPosition) {
         object.position.y = groundLevel + height / 2; // Position base at ground level
          // Place further out horizontally
         object.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 15 + 15); // 15 to 30 units left or right
+    } else if (type === 'house') {
+        const height = Math.random() * 3 + 2; // Random height between 2 and 5
+        const width = Math.random() * 3 + 2;   // Random width between 2 and 5
+        const depth = Math.random() * 2 + 3;   // Random depth between 3 and 5
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+        // House colors - various colors like beige, brown, etc.
+        const houseColors = [0x8B4513, 0xDEB887, 0xD2B48C, 0xBC8F8F, 0xCD853F];
+        const color = houseColors[Math.floor(Math.random() * houseColors.length)];
+        const material = new THREE.MeshStandardMaterial({ color: color, flatShading: true });
+        object = new THREE.Mesh(geometry, material);
+        object.position.y = groundLevel + height / 2; // Position base at ground level
+        object.position.x = (Math.random() - 0.5) * 20; // Closer to center for houses
+    } else if (type === 'apartment') {
+        const height = Math.random() * 8 + 5; // Random height between 5 and 13
+        const width = Math.random() * 4 + 3;   // Random width between 3 and 7
+        const depth = Math.random() * 3 + 2;   // Random depth between 2 and 5
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+        // Apartment colors - greys and whites
+        const aptColors = [0x708090, 0x778899, 0x696969, 0x808080, 0xA9A9A9];
+        const color = aptColors[Math.floor(Math.random() * aptColors.length)];
+        const material = new THREE.MeshStandardMaterial({ color: color, flatShading: true });
+        object = new THREE.Mesh(geometry, material);
+        object.position.y = groundLevel + height / 2; // Position base at ground level
+        object.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 10 + 8); // Medium distance
     } else if (type === 'mountain') {
         const radius = Math.random() * 5 + 5; // Base radius 5 to 10
         const height = Math.random() * 10 + 8; // Height 8 to 18
@@ -356,13 +463,26 @@ function createSceneryObject(type, zPosition) {
         object.position.y = groundLevel; // Base of cone sits at ground level
          // Place even further out
         object.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 20 + 30); // 30 to 50 units left or right
+    } else if (type === 'road') {
+        const length = Math.random() * 20 + 10; // Random length between 10 and 30
+        const width = 2; // Fixed width for roads
+        const geometry = new THREE.BoxGeometry(length, 0.1, width);
+        // Dark gray asphalt color
+        const material = new THREE.MeshStandardMaterial({ color: 0x333333, flatShading: true });
+        object = new THREE.Mesh(geometry, material);
+        object.position.y = -4.95; // Just above ground level
+        object.position.x = (Math.random() - 0.5) * 40; // Spread across the landscape
     }
 
     if (object) {
         object.position.z = zPosition;
         object.userData = { type: type }; // Store type for potential differentiation later
-        if (type === 'skyscraper') skyscrapers.push(object);
+        if (type === 'skyscraper' || type === 'house' || type === 'apartment') {
+            if (type === 'house') houses.push(object);
+            else skyscrapers.push(object); // Reuse skyscrapers array for apartments too
+        }
         if (type === 'mountain') mountains.push(object);
+        if (type === 'road') roads.push(object);
         scene.add(object);
     }
     return object; // Return the created object for recycling logic
@@ -390,10 +510,17 @@ function spawnInitialRings(count) {
 
 function spawnInitialScenery(count, type) {
     let currentZ = -20; // Start scenery further back
-    const spacing = type === 'mountain' ? 30 : 15; // Space mountains further apart
+    const spacing = type === 'mountain' ? 30 : type === 'skyscraper' ? 20 : type === 'road' ? 25 : 10; // Space mountains further apart, skyscrapers medium, roads medium, houses close
     for (let i = 0; i < count; i++) {
         createSceneryObject(type, currentZ);
         currentZ -= (Math.random() * spacing + spacing / 2);
+    }
+}
+
+function spawnInitialClouds(count) {
+    for (let i = 0; i < count; i++) {
+        const zPos = -30 - (Math.random() * 100); // Spread clouds far back
+        createCloud(zPos);
     }
 }
 
@@ -444,10 +571,20 @@ function checkCollisions() {
     // Create a bounding box for the plane (approximate)
     const planeBox = new THREE.Box3().setFromObject(plane);
 
-    // Check collision with skyscrapers
+    // Check collision with skyscrapers and apartments
     for (let skyscraper of skyscrapers) {
         const skyscraperBox = new THREE.Box3().setFromObject(skyscraper);
         if (planeBox.intersectsBox(skyscraperBox)) {
+            triggerScreenShake(0.8); // Strong shake for collision
+            gameOver();
+            return;
+        }
+    }
+
+    // Check collision with houses
+    for (let house of houses) {
+        const houseBox = new THREE.Box3().setFromObject(house);
+        if (planeBox.intersectsBox(houseBox)) {
             triggerScreenShake(0.8); // Strong shake for collision
             gameOver();
             return;
@@ -485,7 +622,7 @@ function updateDifficulty() {
 }
 
 function updateRings(deltaTime, moveDistance) {
-     const furthestZ = getFurthestZ([rings, skyscrapers, mountains]); // Consider all objects for Z placement
+     const furthestZ = getFurthestZ([rings, skyscrapers, houses, mountains]); // Consider all objects for Z placement
 
      // Dynamic ring spacing based on score (rings get closer together at higher scores)
      const baseSpacing = 15;
@@ -535,9 +672,8 @@ function updateRings(deltaTime, moveDistance) {
 }
 
 function updateScenery(sceneryArray, deltaTime, moveDistance) {
-     const furthestZ = getFurthestZ([rings, skyscrapers, mountains]);
+     const furthestZ = getFurthestZ([rings, skyscrapers, houses, mountains]);
      const recycleDistance = camera.position.z + 30; // Recycle when further behind camera
-     const baseSpacing = sceneryArray === mountains ? 30 : 15; // Use appropriate spacing
 
     for (let i = sceneryArray.length - 1; i >= 0; i--) {
         const sceneryObject = sceneryArray[i];
@@ -551,18 +687,28 @@ function updateScenery(sceneryArray, deltaTime, moveDistance) {
             // Reposition based on type
             if (type === 'skyscraper') {
                  const height = Math.random() * 15 + 10;
-                 sceneryObject.geometry = new THREE.BoxGeometry(Math.random() * 2 + 1, height, Math.random() * 2 + 1); // Regenerate geom for size variation
+                 sceneryObject.geometry = new THREE.BoxGeometry(Math.random() * 2 + 1, height, Math.random() * 2 + 1);
                  sceneryObject.position.y = groundLevel + height / 2;
-                 sceneryObject.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 15 + 15); // 15 to 30 units left or right
+                 sceneryObject.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 15 + 15);
+            } else if (type === 'apartment') {
+                 const height = Math.random() * 8 + 5;
+                 sceneryObject.geometry = new THREE.BoxGeometry(Math.random() * 4 + 3, height, Math.random() * 3 + 2);
+                 sceneryObject.position.y = groundLevel + height / 2;
+                 sceneryObject.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 10 + 8);
+            } else if (type === 'house') {
+                 const height = Math.random() * 3 + 2;
+                 sceneryObject.geometry = new THREE.BoxGeometry(Math.random() * 3 + 2, height, Math.random() * 2 + 3);
+                 sceneryObject.position.y = groundLevel + height / 2;
+                 sceneryObject.position.x = (Math.random() - 0.5) * 20;
             } else if (type === 'mountain') {
                  const radius = Math.random() * 5 + 5;
                  const height = Math.random() * 10 + 8;
-                 sceneryObject.geometry = new THREE.ConeGeometry(radius, height, 8); // Regenerate geom
-                 sceneryObject.position.y = groundLevel; // Base at ground
-                 sceneryObject.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 20 + 30); // 30 to 50 units left or right
+                 sceneryObject.geometry = new THREE.ConeGeometry(radius, height, 8);
+                 sceneryObject.position.y = groundLevel;
+                 sceneryObject.position.x = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 20 + 30);
             }
             // Common repositioning
-             sceneryObject.position.z = furthestZ - (Math.random() * baseSpacing + baseSpacing / 2); // Place far behind, add random spacing
+             sceneryObject.position.z = furthestZ - (Math.random() * 20 + 10); // Place far behind, add random spacing
         }
     }
 }
@@ -590,7 +736,9 @@ function animate() {
 
         updatePlaneMovement(deltaTime);
         updateRings(deltaTime, moveDistance);
-        updateScenery(skyscrapers, deltaTime, moveDistance); // Update skyscrapers
+        updateScenery(skyscrapers, deltaTime, moveDistance); // Update skyscrapers and apartments
+        updateScenery(houses, deltaTime, moveDistance);     // Update houses
+        updateScenery(roads, deltaTime, moveDistance);      // Update roads
         updateScenery(mountains, deltaTime, moveDistance);   // Update mountains
         updateCamera();
     }
@@ -600,6 +748,9 @@ function animate() {
 
     // Update particles (always, even when paused)
     updateParticles();
+
+    // Update clouds (always, even when paused)
+    updateClouds(deltaTime);
 
     // Always render the scene
     renderer.render(scene, camera);
