@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Plane Flyer Game - Enhanced Scenery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="info">Score: 0</div>
+    <div id="speedDisplay">Speed: 1.0x</div>
+    <div id="settings">
+        <label for="touchSensitivity">Touch Sensitivity: <span id="sensitivityValue">5</span></label>
+        <input type="range" id="touchSensitivity" min="1" max="10" value="5">
+    </div>
+    <div id="instructions">Use Arrow Keys (Up, Down, Left, Right) to fly. Press P or ESC to pause. On mobile, touch and drag to control the plane.</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Game State Screens -->
+    <div id="startScreen" class="game-screen active">
+        <h1>3D Plane Flyer</h1>
+        <p>Fly through the golden rings to score points!</p>
+        <p>Avoid the buildings and mountains!</p>
+        <button id="startButton">Start Game</button>
+        <div id="highScoreDisplay">High Score: 0</div>
+    </div>
+
+    <div id="gameOverScreen" class="game-screen">
+        <h1>Game Over!</h1>
+        <div id="finalScore">Score: 0</div>
+        <div id="finalHighScore">High Score: 0</div>
+        <button id="restartButton">Play Again</button>
+    </div>
+
+    <div id="pauseScreen" class="game-screen">
+        <h1>Paused</h1>
+        <button id="resumeButton">Resume</button>
+        <button id="restartFromPauseButton">Restart</button>
+    </div>
+
+    <!-- Load Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script src="game.js"></script>
+</body>
+</html>
