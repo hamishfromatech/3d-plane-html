@@ -1,11 +1,5 @@
 # 3D Plane Flyer Game 🛩️
 
-A thrilling 3D plane flying game built with Three.js, featuring immersive cityscapes, progressive difficulty, and smooth gameplay. Fly through golden rings while avoiding buildings in this endless flyer!
-
-## 🎮 Play Now!
-
-You can play the game directly in your browser: **[Play 3D Plane Flyer](https://hamishfromatech.github.io/3d-plane-html/)**
-
 ## ✨ Features
 
 ### 🎯 Core Gameplay
